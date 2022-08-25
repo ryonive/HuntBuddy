@@ -15,8 +15,6 @@ namespace HuntBuddy
 		public float IconScale = 1f;
 		public Vector4 IconBackgroundColour = new(0.76f, 0.75f, 0.76f, 0.8f);
 
-		[JsonIgnore] public uint IconBackgroundColourU32;
-
 		public void Save()
 		{
 			Plugin.PluginInterface.SavePluginConfig(this);

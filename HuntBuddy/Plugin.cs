@@ -16,6 +16,7 @@ using Lumina.Excel.GeneratedSheets;
 using HuntBuddy.Attributes;
 using HuntBuddy.Ipc;
 using HuntBuddy.Structs;
+using HuntBuddy.Interface;
 using ImGuiNET;
 using ImGuiScene;
 using Lumina.Data.Files;
@@ -59,7 +60,7 @@ namespace HuntBuddy
 		public static Framework Framework { get; set; } = null!;
 
 		private readonly PluginCommandManager<Plugin> commandManager;
-		private readonly Interface pluginInterface;
+		private readonly HuntWindow pluginUi;
 		private ObtainedBillEnum lastState;
 		public readonly Dictionary<string, Dictionary<KeyValuePair<uint, string>, List<MobHuntEntry>>> MobHuntEntries;
 		public readonly ConcurrentBag<MobHuntEntry> CurrentAreaMobHuntEntries;
@@ -71,11 +72,11 @@ namespace HuntBuddy
 		public Plugin()
 		{
 			this.commandManager = new PluginCommandManager<Plugin>(this, Commands);
-			this.pluginInterface = new Interface(this);
+			this.pluginUi = new HuntWindow();
 			this.MobHuntEntries = new Dictionary<string, Dictionary<KeyValuePair<uint, string>, List<MobHuntEntry>>>();
 			this.CurrentAreaMobHuntEntries = new ConcurrentBag<MobHuntEntry>();
 			this.Configuration = (Configuration)(PluginInterface.GetPluginConfig() ?? new Configuration());
-			this.Configuration.IconBackgroundColourU32 =
+			this.pluginUi.IconBackgroundColourU32 =
 				ImGui.ColorConvertFloat4ToU32(this.Configuration.IconBackgroundColour);
 
 			unsafe
@@ -83,12 +84,91 @@ namespace HuntBuddy
 				this.MobHuntStruct =
 					(MobHuntStruct*)SigScanner.GetStaticAddressFromSig(
 						"D1 48 8D 0D ?? ?? ?? ?? 48 83 C4 20 5F E9 ?? ?? ?? ??");
+
+				this.pluginUi.GetCurrentKills = offset => (uint)this.MobHuntStruct->CurrentKills[offset];
 			}
+
+			this.pluginUi.GetPluginName = () => this.Name;
+			this.pluginUi.GetMobHuntEntries = () => this.MobHuntEntries;
+			this.pluginUi.GetCurrentAreaMobHuntEntries = () => this.CurrentAreaMobHuntEntries.ToList();
+			this.pluginUi.IsMobHuntEntriesReady = () => this.MobHuntEntriesReady;
+			this.pluginUi.GetShowLocalHunts = () => this.Configuration.ShowLocalHunts;
+			this.pluginUi.GetShowLocalHuntIcons = () => this.Configuration.ShowLocalHuntIcons;
+			this.pluginUi.GetHideLocalHuntBackground = () => this.Configuration.HideLocalHuntBackground;
+			this.pluginUi.GetHideCompletedHunts = () => this.Configuration.HideCompletedHunts;
+			this.pluginUi.GetIconScale = () => this.Configuration.IconScale;
+			this.pluginUi.GetIconBackgroundColour = () => this.Configuration.IconBackgroundColour;
+
+			this.pluginUi.Reload += () =>
+			{
+				this.MobHuntEntriesReady = false;
+				Task.Run(this.ReloadData);
+			};
+
+			this.pluginUi.ShowLocalHunts += value =>
+			{
+				this.Configuration.ShowLocalHunts = value;
+				this.Configuration.Save();
+			};
+
+			this.pluginUi.ShowLocalHuntIcons += value =>
+			{
+				this.Configuration.ShowLocalHuntIcons = value;
+				this.Configuration.Save();
+			};
+
+			this.pluginUi.HideLocalHuntBackground += value =>
+			{
+				this.Configuration.HideLocalHuntBackground = value;
+				this.Configuration.Save();
+			};
+
+			this.pluginUi.HideCompletedHunts += value =>
+			{
+				this.Configuration.HideCompletedHunts = value;
+				this.Configuration.Save();
+			};
+
+			this.pluginUi.IconScale += value =>
+			{
+				this.Configuration.IconScale = value;
+				this.Configuration.Save();
+			};
+
+			this.pluginUi.IconBackgroundColour += value =>
+			{
+				this.Configuration.IconBackgroundColour = value;
+				this.Configuration.Save();
+			};
+
+			this.pluginUi.IsTeleporterConsumerSubscribed = () => TeleportConsumer?.Subscribed ?? false;
+			this.pluginUi.LocationContainsKey += key => Location.Database.ContainsKey(key);
+			this.pluginUi.PlaceMapMarker += mobHuntEntry => Location.CreateMapMarker(
+				mobHuntEntry.TerritoryType,
+				mobHuntEntry.MapId,
+				mobHuntEntry.MobHuntId,
+				mobHuntEntry.Name,
+				Location.OpenType.None);
+			this.pluginUi.PlaceMapMarkerAndShowMap += mobHuntEntry => Location.CreateMapMarker(
+				mobHuntEntry.TerritoryType,
+				mobHuntEntry.MapId,
+				mobHuntEntry.MobHuntId,
+				mobHuntEntry.Name);
+			this.pluginUi.PlaceMapMarkerAndShowSpecialMap += mobHuntEntry => Location.CreateMapMarker(
+				mobHuntEntry.TerritoryType,
+				mobHuntEntry.MapId,
+				mobHuntEntry.MobHuntId,
+				mobHuntEntry.Name,
+				Location.OpenType.ShowOpen);
+			this.pluginUi.TeleportToNearestAetheryte += mobHuntEntry => Location.TeleportToNearestAetheryte(
+				mobHuntEntry.TerritoryType,
+				mobHuntEntry.MapId,
+				mobHuntEntry.MobHuntId);
 
 			Plugin.TeleportConsumer = new TeleportConsumer();
 			Plugin.ClientState.TerritoryChanged += this.ClientStateOnTerritoryChanged;
 			Plugin.PluginInterface.UiBuilder.Draw += this.DrawInterface;
-			Plugin.PluginInterface.UiBuilder.Draw += this.pluginInterface.DrawLocalHunts;
+			Plugin.PluginInterface.UiBuilder.Draw += this.pluginUi.DrawLocalHunts;
 			Plugin.PluginInterface.UiBuilder.OpenConfigUi += this.OpenConfigUi;
 			Plugin.Framework.Update += this.FrameworkOnUpdate;
 		}
@@ -119,12 +199,12 @@ namespace HuntBuddy
 
 		private void OpenConfigUi()
 		{
-			this.pluginInterface.DrawInterface = !this.pluginInterface.DrawInterface;
+			this.pluginUi.DrawInterface = !this.pluginUi.DrawInterface;
 		}
 
 		private void DrawInterface()
 		{
-			this.pluginInterface.DrawInterface = this.pluginInterface.DrawInterface && this.pluginInterface.Draw();
+			this.pluginUi.DrawInterface = this.pluginUi.DrawInterface && this.pluginUi.Draw();
 		}
 
 		private void Dispose(bool disposing)
@@ -137,7 +217,7 @@ namespace HuntBuddy
 			this.MobHuntEntriesReady = false;
 			Plugin.Framework.Update -= this.FrameworkOnUpdate;
 			Plugin.PluginInterface.UiBuilder.Draw -= this.DrawInterface;
-			Plugin.PluginInterface.UiBuilder.Draw -= this.pluginInterface.DrawLocalHunts;
+			Plugin.PluginInterface.UiBuilder.Draw -= this.pluginUi.DrawLocalHunts;
 			Plugin.PluginInterface.UiBuilder.OpenConfigUi -= this.OpenConfigUi;
 
 			this.commandManager.Dispose();

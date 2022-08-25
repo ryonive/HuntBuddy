@@ -56,4 +56,7 @@
     <ItemGroup>
         <PackageReference Include="DalamudPackager" Version="2.1.8" />
     </ItemGroup>
+    <ItemGroup>
+      <ProjectReference Include="..\HuntBuddy.Interface\HuntBuddy.Interface.csproj" />
+    </ItemGroup>
 </Project>
