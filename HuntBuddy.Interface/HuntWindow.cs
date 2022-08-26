@@ -447,7 +447,10 @@ namespace HuntBuddy.Interface
 					this.IconBackgroundColourU32);
 			}
 
-			drawList.AddImage(mobHuntEntry.Icon.ImGuiHandle, cursorPos, cursorPos + imageSize);
+			if (mobHuntEntry.Icon != null)
+			{
+				drawList.AddImage(mobHuntEntry.Icon.ImGuiHandle, cursorPos, cursorPos + imageSize);
+			}
 		}
 	}
 }

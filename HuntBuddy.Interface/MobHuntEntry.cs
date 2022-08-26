@@ -24,10 +24,10 @@ public class MobHuntEntry : IDisposable
 
 	public uint NeededKills { get; set; }
 
-	public TextureWrap Icon { get; init; } = null!;
+	public TextureWrap? Icon { get; init; }
 
 	public void Dispose()
 	{
-		this.Icon.Dispose();
+		this.Icon?.Dispose();
 	}
 }
