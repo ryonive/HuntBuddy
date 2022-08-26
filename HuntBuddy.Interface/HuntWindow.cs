@@ -6,16 +6,16 @@ namespace HuntBuddy.Interface
 {
 	public class HuntWindow
 	{
-		public Func<string>? GetPluginName = null!;
-		public Func<uint, uint>? GetCurrentKills = null!;
-		public Func<bool>? IsMobHuntEntriesReady = null!;
-		public Func<bool>? IsTeleporterConsumerSubscribed = null!;
-		public Func<uint, bool>? LocationContainsKey = null!;
+		public Func<string>? GetPluginName { get; set; }
+		public Func<uint, uint>? GetCurrentKills { get; set; }
+		public Func<bool>? IsMobHuntEntriesReady { get; set; }
+		public Func<bool>? IsTeleporterConsumerSubscribed { get; set; }
+		public Func<uint, bool>? LocationContainsKey { get; set; }
 
 		public Func<Dictionary<string, Dictionary<KeyValuePair<uint, string>, List<MobHuntEntry>>>>? GetMobHuntEntries =
 			null!;
 
-		public Func<List<MobHuntEntry>>? GetCurrentAreaMobHuntEntries = null!;
+		public Func<List<MobHuntEntry>>? GetCurrentAreaMobHuntEntries { get; set; }
 
 		public event Action? Reload;
 
@@ -29,12 +29,12 @@ namespace HuntBuddy.Interface
 
 		#region Configuration
 
-		public Func<bool>? GetShowLocalHunts = null!;
-		public Func<bool>? GetShowLocalHuntIcons = null!;
-		public Func<bool>? GetHideLocalHuntBackground = null!;
-		public Func<bool>? GetHideCompletedHunts = null!;
-		public Func<float>? GetIconScale = null!;
-		public Func<Vector4>? GetIconBackgroundColour = null!;
+		public Func<bool>? GetShowLocalHunts { get; set; }
+		public Func<bool>? GetShowLocalHuntIcons { get; set; }
+		public Func<bool>? GetHideLocalHuntBackground { get; set; }
+		public Func<bool>? GetHideCompletedHunts { get; set; }
+		public Func<float>? GetIconScale { get; set; }
+		public Func<Vector4>? GetIconBackgroundColour { get; set; }
 
 		public event Action<bool>? ShowLocalHunts;
 
