@@ -1,6 +1,7 @@
 ﻿using System.Numerics;
 using Dalamud.Interface;
 using ImGuiNET;
+using FlexConfig;
 
 namespace HuntBuddy.Interface
 {
@@ -29,36 +30,31 @@ namespace HuntBuddy.Interface
 
 		#region Configuration
 
-		public Func<bool>? GetShowLocalHunts { get; set; }
-		public Func<bool>? GetShowLocalHuntIcons { get; set; }
-		public Func<bool>? GetHideLocalHuntBackground { get; set; }
-		public Func<bool>? GetHideCompletedHunts { get; set; }
-		public Func<float>? GetIconScale { get; set; }
-		public Func<Vector4>? GetIconBackgroundColour { get; set; }
+		private readonly Configuration configuration;
 
-		public event Action<bool>? ShowLocalHunts;
-
-		public event Action<bool>? ShowLocalHuntIcons;
-
-		public event Action<bool>? HideLocalHuntBackground;
-
-		public event Action<bool>? HideCompletedHunts;
-
-		public event Action<float>? IconScale;
-
-		public event Action<Vector4>? IconBackgroundColour;
-
-		public uint IconBackgroundColourU32;
+		private uint iconBackgroundColourU32;
 
 		#endregion
 
 		public bool DrawInterface;
 		private bool drawConfigurationInterface;
 
-		public HuntWindow()
+		public HuntWindow(Configuration configuration)
 		{
-			this.IconBackgroundColour +=
-				value => this.IconBackgroundColourU32 = ImGui.ColorConvertFloat4ToU32(value);
+			this.configuration = configuration;
+
+			if (!this.configuration.ContainsKey("IconScale"))
+			{
+				this.configuration.Set("IconScale", 1.0f);
+			}
+
+			if (!this.configuration.ContainsKey("IconBackgroundColour"))
+			{
+				this.configuration.Set("IconBackgroundColour", new Vector4(0.76f, 0.75f, 0.76f, 0.8f));
+			}
+
+			this.iconBackgroundColourU32 =
+				ImGui.ColorConvertFloat4ToU32(this.configuration.Get("IconBackgroundColour"));
 		}
 
 		public bool Draw()
@@ -239,13 +235,13 @@ namespace HuntBuddy.Interface
 
 		public void DrawLocalHunts()
 		{
-			if (this.GetCurrentAreaMobHuntEntries == null || this.GetShowLocalHunts == null)
+			if (this.GetCurrentAreaMobHuntEntries == null)
 			{
 				return;
 			}
 
 			var currentAreaMobHuntEntries = this.GetCurrentAreaMobHuntEntries.Invoke();
-			if (!this.GetShowLocalHunts.Invoke() ||
+			if (!this.configuration.Get("ShowLocalHunts", false) ||
 			    currentAreaMobHuntEntries.Count(
 				    x =>
 					    this.GetCurrentKills?.Invoke(x.CurrentKillsOffset) == x.NeededKills) ==
@@ -258,7 +254,7 @@ namespace HuntBuddy.Interface
 
 			var windowFlags = ImGuiWindowFlags.NoNavInputs | ImGuiWindowFlags.NoDocking;
 
-			if (this.GetHideLocalHuntBackground?.Invoke() ?? false)
+			if (this.configuration.Get("HideLocalHuntBackground", false))
 			{
 				windowFlags |= ImGuiWindowFlags.NoBackground;
 			}
@@ -272,7 +268,7 @@ namespace HuntBuddy.Interface
 			{
 				var currentKills = this.GetCurrentKills?.Invoke(mobHuntEntry.CurrentKillsOffset);
 
-				if ((this.GetHideCompletedHunts?.Invoke() ?? false) && currentKills == mobHuntEntry.NeededKills)
+				if (this.configuration!.Get("HideCompletedHunts", false) && currentKills == mobHuntEntry.NeededKills)
 				{
 					continue;
 				}
@@ -324,7 +320,7 @@ namespace HuntBuddy.Interface
 
 				ImGui.Text($"{mobHuntEntry.Name} ({currentKills}/{mobHuntEntry.NeededKills})");
 
-				if (this.GetShowLocalHuntIcons != null && this.GetShowLocalHuntIcons.Invoke())
+				if (this.configuration.Get("ShowLocalHuntIcons", false))
 				{
 					this.DrawHuntIcon(mobHuntEntry);
 				}
@@ -333,37 +329,46 @@ namespace HuntBuddy.Interface
 			ImGui.End();
 		}
 
-		private void Checkbox(string label, bool? value, Action<bool>? callback)
+		private void Checkbox(string label, string key)
 		{
-			var refValue = value ?? false;
-			if (ImGui.Checkbox(label, ref refValue))
+			var value = this.configuration.Get(key, default(bool));
+			
+			if (!ImGui.Checkbox(label, ref value.Reference))
 			{
-				callback?.Invoke(refValue);
+				return;
 			}
+
+			this.configuration.Set(key, value);
 		}
 
 		private void SliderFloat(
 			string label,
-			float? value,
+			string key,
 			float min,
 			float max,
-			string? format,
-			Action<float>? callback)
+			string? format)
 		{
-			var refValue = value ?? 0.0f;
-			if (ImGui.SliderFloat(label, ref refValue, min, max, format ?? "%.3f"))
+			var value = this.configuration.Get(key, 0.0f);
+			
+			if (!ImGui.SliderFloat(label, ref value.Reference, min, max, format ?? "%.3f"))
 			{
-				callback?.Invoke(refValue);
+				return;
 			}
+
+			this.configuration.Set(key, value);
 		}
 
-		private void ColorEdit4(string label, Vector4? value, Action<Vector4>? callback)
+		private void ColorEdit4(string label, string key)
 		{
-			var refValue = value ?? Vector4.Zero;
-			if (ImGui.ColorEdit4(label, ref refValue))
+			var value = this.configuration.Get(key, default(Vector4));
+			
+			if (!ImGui.ColorEdit4(label, ref value.Reference))
 			{
-				callback?.Invoke(refValue);
+				return;
 			}
+
+			this.iconBackgroundColourU32 = ImGui.ColorConvertFloat4ToU32(value);
+			this.configuration.Set(key, value);
 		}
 
 		private void DrawConfiguration()
@@ -375,33 +380,17 @@ namespace HuntBuddy.Interface
 				return;
 			}
 
-			this.Checkbox(
-				"Show hunts in local area",
-				this.GetShowLocalHunts?.Invoke(),
-				this.ShowLocalHunts);
-			this.Checkbox(
-				"Show icons of hunts in local area",
-				this.GetShowLocalHuntIcons?.Invoke(),
-				this.ShowLocalHuntIcons);
-			this.Checkbox(
-				"Hide background of local hunts window",
-				this.GetHideLocalHuntBackground?.Invoke(),
-				this.HideLocalHuntBackground);
-			this.Checkbox(
-				"Hide completed targets in local hunts window",
-				this.GetHideCompletedHunts?.Invoke(),
-				this.HideCompletedHunts);
+			this.Checkbox("Show hunts in local area", "ShowLocalHunts");
+			this.Checkbox("Show icons of hunts in local area", "ShowLocalHuntIcons");
+			this.Checkbox("Hide background of local hunts window", "HideLocalHuntBackground");
+			this.Checkbox("Hide completed targets in local hunts window", "HideCompletedHunts");
 			this.SliderFloat(
 				"Hunt icon scale",
-				this.GetIconScale?.Invoke(),
+				"IconScale",
 				0.2f,
 				2f,
-				"%.2f",
-				this.IconScale);
-			this.ColorEdit4(
-				"Hunt icon background colour",
-				this.GetIconBackgroundColour?.Invoke(),
-				this.IconBackgroundColour);
+				"%.2f");
+			this.ColorEdit4("Hunt icon background colour", "IconBackgroundColour");
 
 			ImGui.End();
 		}
@@ -427,7 +416,7 @@ namespace HuntBuddy.Interface
 		{
 			var cursorPos = ImGui.GetCursorScreenPos();
 			var imageSize = mobHuntEntry.ExpansionId < 3 ? new Vector2(192f, 128f) : new Vector2(210f);
-			imageSize *= ImGui.GetIO().FontGlobalScale * (this.GetIconScale?.Invoke() ?? 0.0f);
+			imageSize *= ImGui.GetIO().FontGlobalScale * this.configuration.Get("IconScale", 1.0f);
 
 			ImGui.InvisibleButton("canvas", imageSize);
 
@@ -437,14 +426,14 @@ namespace HuntBuddy.Interface
 				drawList.AddCircleFilled(
 					cursorPos + (imageSize / 2f),
 					imageSize.X / 2f,
-					this.IconBackgroundColourU32);
+					this.iconBackgroundColourU32);
 			}
 			else
 			{
 				drawList.AddRectFilled(
 					cursorPos,
 					cursorPos + imageSize,
-					this.IconBackgroundColourU32);
+					this.iconBackgroundColourU32);
 			}
 
 			if (mobHuntEntry.Icon != null)

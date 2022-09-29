@@ -9,6 +9,7 @@
         <RootNamespace>HuntBuddy</RootNamespace>
         <IsPackable>false</IsPackable>
         <LangVersion>default</LangVersion>
+        <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     </PropertyGroup>
     <PropertyGroup>
         <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
@@ -54,7 +55,8 @@
         </Reference>
     </ItemGroup>
     <ItemGroup>
-        <PackageReference Include="DalamudPackager" Version="2.1.8"/>
+        <PackageReference Include="DalamudPackager" Version="2.1.8" />
+        <PackageReference Include="FlexConfig" Version="0.0.10" />
     </ItemGroup>
     <ItemGroup>
         <ProjectReference Include="..\HuntBuddy.Interface\HuntBuddy.Interface.csproj">

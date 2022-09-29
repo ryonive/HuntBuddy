@@ -44,5 +44,8 @@
       <Private>False</Private>
     </Reference>
   </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="FlexConfig" Version="0.0.8" />
+  </ItemGroup>
 
 </Project>

@@ -8,8 +8,25 @@
         "resolved": "2.1.8",
         "contentHash": "YqagNXs9InxmqkXzq7kLveImxnodkBEicAhydMXVp7dFjC7xb76U6zGgAax4/BWIWfZeWzr5DJyQSev31kj81A=="
       },
+      "FlexConfig": {
+        "type": "Direct",
+        "requested": "[0.0.10, )",
+        "resolved": "0.0.10",
+        "contentHash": "OX4ETuXI64HiIe9LRNleQ5DsFmd8v4UZ2EGEefDQwRyje4ziF11nTRESDKCgRNEtC2p0QtxZ7R8I7qY3eIo7qA==",
+        "dependencies": {
+          "Newtonsoft.Json": "13.0.1"
+        }
+      },
+      "Newtonsoft.Json": {
+        "type": "Transitive",
+        "resolved": "13.0.1",
+        "contentHash": "ppPFpBcvxdsfUonNcvITKqLl3bqxWbDCZIzDWHzjpdAHRFfZe0Dw9HmA0+za13IdyrgJwpkDTDA9fHaxOrt20A=="
+      },
       "huntbuddy.interface": {
-        "type": "Project"
+        "type": "Project",
+        "dependencies": {
+          "FlexConfig": "[0.0.10, )"
+        }
       }
     }
   }

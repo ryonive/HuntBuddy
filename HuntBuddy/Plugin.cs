@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Globalization;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Dalamud.Data;
@@ -17,7 +18,6 @@ using HuntBuddy.Attributes;
 using HuntBuddy.Ipc;
 using HuntBuddy.Structs;
 using HuntBuddy.Interface;
-using ImGuiNET;
 using ImGuiScene;
 using Lumina.Data.Files;
 
@@ -66,18 +66,17 @@ namespace HuntBuddy
 		public readonly ConcurrentBag<MobHuntEntry> CurrentAreaMobHuntEntries;
 		public bool MobHuntEntriesReady = true;
 		public readonly unsafe MobHuntStruct* MobHuntStruct;
-		public readonly Configuration Configuration;
+		public readonly FlexConfig.Configuration Configuration;
 		public static TeleportConsumer? TeleportConsumer;
 
 		public Plugin()
 		{
 			this.commandManager = new PluginCommandManager<Plugin>(this, Commands);
-			this.pluginUi = new HuntWindow();
 			this.MobHuntEntries = new Dictionary<string, Dictionary<KeyValuePair<uint, string>, List<MobHuntEntry>>>();
 			this.CurrentAreaMobHuntEntries = new ConcurrentBag<MobHuntEntry>();
-			this.Configuration = (Configuration)(PluginInterface.GetPluginConfig() ?? new Configuration());
-			this.pluginUi.IconBackgroundColourU32 =
-				ImGui.ColorConvertFloat4ToU32(this.Configuration.IconBackgroundColour);
+			this.Configuration = new FlexConfig.Configuration(PluginInterface.ConfigFile.FullName);
+			this.Configuration.Load();
+			this.pluginUi = new HuntWindow(this.Configuration);
 
 			unsafe
 			{
@@ -92,53 +91,11 @@ namespace HuntBuddy
 			this.pluginUi.GetMobHuntEntries = () => this.MobHuntEntries;
 			this.pluginUi.GetCurrentAreaMobHuntEntries = () => this.CurrentAreaMobHuntEntries.ToList();
 			this.pluginUi.IsMobHuntEntriesReady = () => this.MobHuntEntriesReady;
-			this.pluginUi.GetShowLocalHunts = () => this.Configuration.ShowLocalHunts;
-			this.pluginUi.GetShowLocalHuntIcons = () => this.Configuration.ShowLocalHuntIcons;
-			this.pluginUi.GetHideLocalHuntBackground = () => this.Configuration.HideLocalHuntBackground;
-			this.pluginUi.GetHideCompletedHunts = () => this.Configuration.HideCompletedHunts;
-			this.pluginUi.GetIconScale = () => this.Configuration.IconScale;
-			this.pluginUi.GetIconBackgroundColour = () => this.Configuration.IconBackgroundColour;
 
 			this.pluginUi.Reload += () =>
 			{
 				this.MobHuntEntriesReady = false;
 				Task.Run(this.ReloadData);
-			};
-
-			this.pluginUi.ShowLocalHunts += value =>
-			{
-				this.Configuration.ShowLocalHunts = value;
-				this.Configuration.Save();
-			};
-
-			this.pluginUi.ShowLocalHuntIcons += value =>
-			{
-				this.Configuration.ShowLocalHuntIcons = value;
-				this.Configuration.Save();
-			};
-
-			this.pluginUi.HideLocalHuntBackground += value =>
-			{
-				this.Configuration.HideLocalHuntBackground = value;
-				this.Configuration.Save();
-			};
-
-			this.pluginUi.HideCompletedHunts += value =>
-			{
-				this.Configuration.HideCompletedHunts = value;
-				this.Configuration.Save();
-			};
-
-			this.pluginUi.IconScale += value =>
-			{
-				this.Configuration.IconScale = value;
-				this.Configuration.Save();
-			};
-
-			this.pluginUi.IconBackgroundColour += value =>
-			{
-				this.Configuration.IconBackgroundColour = value;
-				this.Configuration.Save();
 			};
 
 			this.pluginUi.IsTeleporterConsumerSubscribed = () => TeleportConsumer?.Subscribed ?? false;
